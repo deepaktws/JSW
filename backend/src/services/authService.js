@@ -1,9 +1,8 @@
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
 import { prisma } from '../config/database.js';
-
-const SALT_ROUNDS = 12;
+import { userPublicSelect } from './userService.js';
+import { hashPassword, verifyPassword } from '../lib/hash.js';
 
 function signToken(user) {
   return jwt.sign(
@@ -21,11 +20,11 @@ export async function registerUser({ name, email, password }) {
     throw err;
   }
 
-  const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+  const hashed = await hashPassword(password);
 
   const user = await prisma.user.create({
     data: { name, email, password: hashed },
-    select: { id: true, name: true, email: true, createdAt: true },
+    select: userPublicSelect,
   });
 
   const token = signToken(user);
@@ -33,33 +32,42 @@ export async function registerUser({ name, email, password }) {
 }
 
 export async function getUserProfile(userId) {
-  return prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, email: true, createdAt: true },
+  return prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+    select: userPublicSelect,
   });
 }
 
 export async function loginUser({ email, password }) {
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      password: true,
+      createdAt: true,
+      updatedAt: true,
+      isActive: true,
+      deletedAt: true,
+    },
+  });
+
+  if (!user || user.deletedAt || !user.isActive) {
     const err = new Error('Invalid email or password');
     err.status = 401;
     throw err;
   }
 
-  const match = await bcrypt.compare(password, user.password);
+  const match = await verifyPassword(password, user.password);
   if (!match) {
     const err = new Error('Invalid email or password');
     err.status = 401;
     throw err;
   }
 
-  const safeUser = {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    createdAt: user.createdAt,
-  };
+  // eslint-disable-next-line no-unused-vars
+  const { password: _pwd, ...safeUser } = user;
 
   const token = signToken(safeUser);
   return { user: safeUser, token };

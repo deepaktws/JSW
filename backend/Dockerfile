@@ -14,7 +14,8 @@ COPY . .
 
 RUN npx prisma generate
 
-RUN chmod +x docker-entrypoint.sh
+# Strip CRLF when the repo is checked out on Windows (otherwise exec fails with "no such file or directory")
+RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh
 
 EXPOSE 5050
 

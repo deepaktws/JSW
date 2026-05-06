@@ -35,7 +35,7 @@ export async function me(req, res, next) {
   try {
     const user = await authService.getUserProfile(req.user.id);
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      return res.status(404).json({ message: 'Account not found' });
     }
     res.json({ user });
   } catch (err) {

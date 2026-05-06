@@ -85,6 +85,7 @@ Then open:
 
 - **App:** http://localhost:5173  
 - **API:** http://localhost:5050  
+- **Swagger UI:** http://localhost:5050/docs (raw OpenAPI: `/docs/openapi.json`)  
 - **Postgres:** localhost:5432 (`app` / `app` / `appdb`)
 
 Optional env overrides (copy root `.env.example` → `.env`):
@@ -119,10 +120,16 @@ Initial migration: `backend/prisma/migrations/`.
 
 | Method | Path | Auth |
 |--------|------|------|
+| GET | `/docs` | No (Swagger UI) |
+| GET | `/health` | No |
 | POST | `/auth/register` | No |
 | POST | `/auth/login` | No |
+| GET | `/auth/me` | Bearer JWT |
 | GET | `/users` | Bearer JWT |
-| GET | `/health` | No |
+| GET | `/users/:id` | Bearer JWT |
+| PATCH | `/users/me` | Bearer JWT (self only) |
+| DELETE | `/users/me` | Bearer JWT (soft-delete, self only) |
+| POST | `/excel/upload` | Bearer JWT |
 
 ## Scripts
 
@@ -145,4 +152,5 @@ cd frontend && npm run lint && npm run format
 
 - Set a strong `JWT_SECRET` in production.
 - Use HTTPS in production and restrict CORS origins as needed (`backend/src/app.js`).
-- Passwords are hashed with bcrypt (cost factor 12).
+- Passwords are hashed with bcrypt (cost factor 12) via `backend/src/lib/hash.js`.
+- PATCH and DELETE on `/users/me` operate on the authenticated user only (identity from JWT, no RBAC).
