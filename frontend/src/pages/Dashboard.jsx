@@ -16,8 +16,8 @@ export function Dashboard() {
 
   return (
     <div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
-        <Title level={2} style={{ margin: 0 }}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <Title level={2} className="!m-0">
           Dashboard
         </Title>
         <Button onClick={() => refetch()} loading={isFetching}>
@@ -29,14 +29,14 @@ export function Dashboard() {
       </Text>
 
       {isLoading && (
-        <div style={{ marginTop: 24, textAlign: 'center' }}>
+        <div className="mt-6 text-center">
           <Spin tip="Loading users…" />
         </div>
       )}
 
       {error && (
         <Alert
-          style={{ marginTop: 16 }}
+          className="mt-4"
           type="error"
           showIcon
           message="Could not load users."
@@ -46,7 +46,7 @@ export function Dashboard() {
 
       {data?.users && (
         <List
-          style={{ marginTop: 16 }}
+          className="mt-4"
           bordered
           dataSource={data.users}
           renderItem={(u) => (

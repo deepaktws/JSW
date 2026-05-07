@@ -10,28 +10,15 @@ function EditableSheetTable({ sheetIndex, sheet, onCellChange }) {
       title: col || `(Column ${colIndex + 1})`,
       dataIndex: col,
       key: `${String(col)}-${colIndex}`,
-      onHeaderCell: () => ({
-        style: {
-          whiteSpace: 'normal',
-          wordBreak: 'break-word',
-          minWidth: 140,
-        },
-      }),
-      onCell: () => ({
-        style: {
-          verticalAlign: 'top',
-          whiteSpace: 'normal',
-          wordBreak: 'break-word',
-          minWidth: 140,
-        },
-      }),
+      onHeaderCell: () => ({ className: '!whitespace-normal break-words min-w-[140px]' }),
+      onCell: () => ({ className: 'align-top !whitespace-normal break-words min-w-[140px]' }),
       render: (_, record, rowIndex) => (
         <Input.TextArea
           value={record[col] ?? ''}
           placeholder="—"
           variant="borderless"
           autoSize={{ minRows: 1, maxRows: 24 }}
-          style={{ resize: 'vertical', minWidth: 0 }}
+          className="min-w-0 resize-y"
           onChange={(e) => onCellChange(sheetIndex, rowIndex, col, e.target.value)}
         />
       ),
@@ -40,25 +27,22 @@ function EditableSheetTable({ sheetIndex, sheet, onCellChange }) {
 
   if (sheet.rows.length === 0) {
     return (
-      <Text type="secondary" style={{ display: 'block', padding: '16px 0' }}>
+      <Text type="secondary" className="block py-4">
         This sheet is empty.
       </Text>
     );
   }
 
   return (
-    <div style={{ width: '100%', overflowX: 'auto' }}>
-      <Table
-        size="small"
-        bordered
-        tableLayout="auto"
-        pagination={false}
-        scroll={{ x: 'max-content' }}
-        rowKey={(_, index) => `sheet-${sheetIndex}-row-${index}`}
-        columns={tableColumns}
-        dataSource={sheet.rows}
-      />
-    </div>
+    <Table
+      size="small"
+      bordered
+      tableLayout="auto"
+      pagination={false}
+      rowKey={(_, index) => `sheet-${sheetIndex}-row-${index}`}
+      columns={tableColumns}
+      dataSource={sheet.rows}
+    />
   );
 }
 
