@@ -13,14 +13,26 @@ export const userPublicSelect = {
 };
 
 /**
- * Lists users that are not soft-deleted.
+ * Lists users that are not soft-deleted (paginated).
+ *
+ * @param {{ skip: number, limit: number }} args
+ * @returns {Promise<{ users: object[], total: number }>}
  */
-export async function listUsers() {
-  return prisma.user.findMany({
-    where: { deletedAt: null },
-    select: userPublicSelect,
-    orderBy: { createdAt: 'desc' },
-  });
+export async function listUsers({ skip, limit }) {
+  const where = { deletedAt: null };
+
+  const [users, total] = await prisma.$transaction([
+    prisma.user.findMany({
+      where,
+      select: userPublicSelect,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return { users, total };
 }
 
 /**

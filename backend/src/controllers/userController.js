@@ -1,14 +1,8 @@
 import { validationResult } from 'express-validator';
+import { paginatedHandler } from '../lib/pagination.js';
 import * as userService from '../services/userService.js';
 
-export async function getUsers(req, res, next) {
-  try {
-    const users = await userService.listUsers();
-    res.json({ users });
-  } catch (err) {
-    next(err);
-  }
-}
+export const getUsers = paginatedHandler(userService.listUsers, 'users');
 
 export async function getUserById(req, res, next) {
   try {

@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: appdb
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U app -d appdb']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - '5050:5050'
+    environment:
+      DATABASE_URL: postgresql://app:app@postgres:5432/appdb?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-use-strong-secret-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: 5050
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '100'
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ['sh', '-c']
+    command:
+      - |
+        apk add --no-cache openssl libc6-compat python3 make g++
+        npm install
+        npx prisma generate
+        npx prisma migrate deploy
+        npx prisma db seed
+        npm run dev
+
+  client:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - '5173:5173'
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5050}
+      CHOKIDAR_USEPOLLING: 'true'
+      CHOKIDAR_INTERVAL: '100'
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - server
+    entrypoint: ['sh', '-c']
+    command:
+      - |
+        npm install
+        npm run dev
+
+volumes:
+  pgdata:
+  backend_node_modules:
+  frontend_node_modules:

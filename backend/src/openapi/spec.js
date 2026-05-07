@@ -58,6 +58,25 @@ export const openapiSpec = {
           user: { $ref: '#/components/schemas/User' },
         },
       },
+      PaginationMeta: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', minimum: 1, example: 1 },
+          limit: { type: 'integer', minimum: 1, maximum: 100, example: 20 },
+          total: { type: 'integer', minimum: 0, example: 42 },
+          totalPages: { type: 'integer', minimum: 0, example: 3 },
+        },
+      },
+      UserListResponse: {
+        type: 'object',
+        properties: {
+          users: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/User' },
+          },
+          meta: { $ref: '#/components/schemas/PaginationMeta' },
+        },
+      },
       AuthResponse: {
         type: 'object',
         properties: {
@@ -244,22 +263,30 @@ export const openapiSpec = {
     '/users': {
       get: {
         tags: ['Users'],
-        summary: 'List users (not soft-deleted)',
+        summary: 'List users (not soft-deleted), paginated',
         security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: '1-based page index',
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Page size (max 100)',
+          },
+        ],
         responses: {
           200: {
             description: 'OK',
             content: {
               'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    users: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/User' },
-                    },
-                  },
-                },
+                schema: { $ref: '#/components/schemas/UserListResponse' },
               },
             },
           },

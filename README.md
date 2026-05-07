@@ -106,6 +106,38 @@ docker compose down
 
 If you previously started **only** Postgres for local dev, stop those containers or use the same compose project so ports stay consistent.
 
+## Docker (development with hot-reload)
+
+For **development** with live file watching and hot-reload:
+
+```bash
+docker compose -f docker-compose.dev.yml up
+```
+
+This uses the base Node.js Alpine image directly and:
+- Mounts your local source directories as volumes (changes reflect immediately)
+- Installs dependencies on container start (cached in named volumes)
+- Runs `npm run dev` for both backend and frontend
+- Includes `CHOKIDAR_USEPOLLING=true` and `CHOKIDAR_INTERVAL=100` for reliable file watching in Docker
+
+**What's mounted:**
+- `./backend` → `/app` (backend source + hot-reload with `node --watch`)
+- `./frontend` → `/app` (frontend source + Vite HMR)
+- `node_modules` are stored in named volumes (persist across restarts, not overwritten by host)
+
+**Workflow:**
+1. Edit files in `backend/` or `frontend/` on your host
+2. Changes are detected via polling (Chokidar)
+3. Backend auto-restarts, frontend hot-reloads in browser
+
+**Stop dev environment:**
+
+```bash
+docker compose -f docker-compose.dev.yml down
+```
+
+**Note:** First startup takes longer (installs deps), but subsequent starts are fast since `node_modules` are cached. Production compose (`docker-compose.yml`) builds static assets and runs optimized images.
+
 ## Database migrations
 
 | Context | Command |
