@@ -20,4 +20,7 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET || 'dev-only-change-in-production',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  
+  fileSizeLimit: Number(process.env.FILE_SIZE_LIMIT) || 20 * 1024 * 1024,
+  chunkSizeLimit: Number(process.env.CHUNK_SIZE_LIMIT) || 1 * 1024 * 1024,
 };

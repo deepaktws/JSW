@@ -42,7 +42,7 @@ export function buildPaginationMeta({ page, limit, total }) {
  * Generic paginated handler wrapper.
  * Service function must return `{ [itemsKey]: array, total: number }`.
  *
- * @param {Function} serviceFn - Service function accepting `{ skip, limit }`
+ * @param {Function} serviceFn - Service function accepting `{ skip, limit, req }`
  * @param {string} [itemsKey='items'] - Key for the items array in service response and final JSON
  * @returns {Function} Express handler (req, res, next) => Promise<void>
  */
@@ -50,7 +50,7 @@ export function paginatedHandler(serviceFn, itemsKey = 'items') {
   return async (req, res, next) => {
     try {
       const { page, limit, skip } = resolvePagination(req.query);
-      const result = await serviceFn({ skip, limit });
+      const result = await serviceFn({ skip, limit, req });
       const { total } = result;
       const items = result[itemsKey];
       const meta = buildPaginationMeta({ page, limit, total });
