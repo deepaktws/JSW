@@ -14,6 +14,7 @@ export const openapiSpec = {
     { name: 'Auth' },
     { name: 'Users' },
     { name: 'Excel' },
+    { name: 'Files' },
   ],
   components: {
     securitySchemes: {
@@ -152,6 +153,47 @@ export const openapiSpec = {
             items: { type: 'object', additionalProperties: true },
           },
           rowCount: { type: 'integer' },
+        },
+      },
+      FileStatus: {
+        type: 'string',
+        enum: ['ACTIVE', 'DELETED'],
+      },
+      File: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          userId: { type: 'string', format: 'uuid' },
+          originalName: { type: 'string' },
+          sizeBytes: { type: 'integer' },
+          mimeType: { type: 'string' },
+          status: { $ref: '#/components/schemas/FileStatus' },
+          deletedAt: { type: 'string', format: 'date-time', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      FileListResponse: {
+        type: 'object',
+        properties: {
+          files: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/File' },
+          },
+          meta: { $ref: '#/components/schemas/PaginationMeta' },
+        },
+      },
+      FileSingleResponse: {
+        type: 'object',
+        properties: {
+          file: { $ref: '#/components/schemas/File' },
+        },
+      },
+      FileDeleteResponse: {
+        type: 'object',
+        properties: {
+          message: { type: 'string', example: 'File deleted successfully' },
+          file: { $ref: '#/components/schemas/File' },
         },
       },
     },
@@ -451,6 +493,190 @@ export const openapiSpec = {
           },
           400: { description: 'No file, invalid type, or empty workbook' },
           401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/files/upload': {
+      post: {
+        tags: ['Files'],
+        summary: 'Upload a file chunk (auto-finalizes when complete)',
+        description: 'Upload file in chunks. Frontend generates file_id (UUID). Server auto-merges when all chunks received. Form field name must be `data`. Max chunk size 1MB.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['data', 'file_id', 'chunk_index', 'total_chunks', 'original_name', 'mime_type'],
+                properties: {
+                  data: { type: 'string', format: 'binary', description: 'Chunk data' },
+                  file_id: { type: 'string', format: 'uuid', description: 'Client-generated UUID for this upload session' },
+                  chunk_index: { type: 'integer', minimum: 0, description: '0-based chunk index' },
+                  total_chunks: { type: 'integer', minimum: 1, description: 'Total number of chunks' },
+                  original_name: { type: 'string', example: 'document.xlsx', description: 'Original filename' },
+                  mime_type: { type: 'string', example: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', description: 'MIME type' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'Upload complete - all chunks received and merged',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    completed: { type: 'boolean', example: true },
+                    file: { $ref: '#/components/schemas/File' },
+                  },
+                },
+              },
+            },
+          },
+          202: {
+            description: 'Chunk received - upload in progress',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    completed: { type: 'boolean', example: false },
+                    progress: {
+                      type: 'object',
+                      properties: {
+                        received: { type: 'integer', example: 15 },
+                        total: { type: 'integer', example: 20 },
+                        percentage: { type: 'integer', example: 75 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: { description: 'Validation failed or invalid chunk' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/files': {
+      get: {
+        tags: ['Files'],
+        summary: 'List user files',
+        description: 'Returns all active files for the authenticated user (paginated).',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'page',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, default: 1 },
+            description: '1-based page index',
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+            description: 'Page size (max 100)',
+          },
+        ],
+        responses: {
+          200: {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/FileListResponse' },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/files/{id}': {
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      get: {
+        tags: ['Files'],
+        summary: 'Get file metadata',
+        description: 'Returns file metadata by ID. User can only access their own files.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/FileSingleResponse' },
+              },
+            },
+          },
+          400: { description: 'Invalid file id' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Access denied' },
+          404: { description: 'File not found' },
+        },
+      },
+      delete: {
+        tags: ['Files'],
+        summary: 'Soft delete file',
+        description: 'Marks the file as deleted. User can only delete their own files.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'File deleted successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/FileDeleteResponse' },
+              },
+            },
+          },
+          400: { description: 'Invalid file id' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Access denied' },
+          404: { description: 'File not found' },
+        },
+      },
+    },
+    '/files/{id}/download': {
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      get: {
+        tags: ['Files'],
+        summary: 'Download file',
+        description: 'Downloads the file. User can only download their own files.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'File content',
+            content: {
+              'application/octet-stream': {
+                schema: {
+                  type: 'string',
+                  format: 'binary',
+                },
+              },
+            },
+          },
+          400: { description: 'Invalid file id' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Access denied' },
+          404: { description: 'File not found' },
         },
       },
     },
