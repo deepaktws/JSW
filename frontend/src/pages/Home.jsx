@@ -1,16 +1,17 @@
 import { useCallback, useState } from 'react';
-import { UploadOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, PlayCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import { Button, Card, Space, Typography, Upload, message } from 'antd';
 import { ExcelWorkbookView } from '../components/excel/ExcelWorkbookView';
 import { parseExcelWorkbook } from '../utils/parseExcelWorkbook';
-
-const { Text } = Typography;
+import { useNavigate } from 'react-router-dom';
+const { Text, Title } = Typography;
 
 export function Home() {
   const [parsing, setParsing] = useState(false);
   const [sheets, setSheets] = useState([]);
-
+  const navigate = useNavigate();
   const hasExcel = sheets.length > 0;
+  const totalRows = sheets.reduce((count, sheet) => count + sheet.rowCount, 0);
 
   const handleBeforeUpload = (file) => {
     void (async () => {
@@ -43,45 +44,84 @@ export function Home() {
 
   const handleSendToModel = () => {
     if (!hasExcel) return;
-    message.info('Send to model — wire your API here with the current sheet data.');
+    navigate('/model');
   };
 
   return (
-    <Card>
-      <Space wrap style={{ marginBottom: 16 }}>
-        <Upload
-          accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          showUploadList={false}
-          beforeUpload={handleBeforeUpload}
-        >
-          <Button type="primary" icon={<UploadOutlined />} loading={parsing}>
-            Upload Excel
-          </Button>
-        </Upload>
-        <Button type="default" disabled={!hasExcel} onClick={handleSendToModel}>
-          Send to model
-        </Button>
-      </Space>
+    <div className="space-y-5">
+      <Card className="!rounded-2xl !border-secondary-border/30 !bg-secondary/10">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <Title level={3} className="!mb-1 !text-secondary">
+              Excel Playground
+            </Title>
+            <Text className="!text-secondary/70">
+              Upload an Excel file, review parsed sheets, edit values, and run your model.
+            </Text>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Upload
+              accept=".xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              showUploadList={false}
+              beforeUpload={handleBeforeUpload}
+            >
+              <Button
+                type="primary"
+                icon={<UploadOutlined />}
+                loading={parsing}
+                className="!border-primary !bg-primary !text-primary-foreground hover:!border-primary/90 hover:!bg-primary/90"
+              >
+                Upload Excel
+              </Button>
+            </Upload>
+            <Button
+              type="default"
+              icon={<PlayCircleOutlined />}
+              disabled={!hasExcel}
+              onClick={handleSendToModel}
+              className="!border-secondary-border !text-secondary disabled:!text-secondary/40"
+            >
+              Run Model
+            </Button>
+          </div>
+        </div>
+      </Card>
 
       {!hasExcel ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 240,
-            border: '1px dashed #d9d9d9',
-            borderRadius: 8,
-            background: '#fafafa',
-          }}
-        >
-          <Text type="secondary" style={{ fontSize: 16 }}>
-            Please upload excel
-          </Text>
-        </div>
+        <Card className="!rounded-2xl !border-secondary-border/30 !bg-secondary/10 ">
+          <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed border-secondary/30 bg-secondary/5 px-6 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <FileExcelOutlined className="text-2xl" />
+            </div>
+            <Title level={4} className="!mb-1 !text-secondary">
+              No workbook loaded
+            </Title>
+            <Text className="!text-secondary/70">
+              Upload a `.xlsx` or `.xls` file to start reviewing and editing rows.
+            </Text>
+          </div>
+        </Card>
       ) : (
-        <ExcelWorkbookView sheets={sheets} onCellChange={updateCell} />
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Card className="!rounded-2xl !border-secondary-border/30 !bg-secondary/10">
+              <Text className="!text-secondary/70">{sheets.length>1 ? "Sheets" : "Sheet"}</Text>
+              <Title level={4} className="!mb-0 !mt-1 !text-secondary">
+                {sheets.length}
+              </Title>
+            </Card>
+            <Card className="!rounded-2xl !border-secondary-border/30 !bg-secondary/10">
+              <Text className="!text-secondary/70">{totalRows>1 ? "Rows" : "Row"}</Text>
+              <Title level={4} className="!mb-0 !mt-1 !text-secondary">
+                {totalRows}
+              </Title>
+            </Card>
+          </div>
+          <Card className="!rounded-2xl !border-secondary-border/30 !bg-secondary/10">
+            <ExcelWorkbookView sheets={sheets} onCellChange={updateCell} />
+          </Card>
+        </>
       )}
-    </Card>
+    </div>
   );
 }

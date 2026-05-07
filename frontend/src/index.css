@@ -1,8 +1,13 @@
-/* Global baseline; component styling is Ant Design (ConfigProvider + CSS-in-JS). */
-* {
-  box-sizing: border-box;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-body {
-  margin: 0;
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply m-0 bg-secondary/5 text-secondary;
+  }
 }

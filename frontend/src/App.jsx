@@ -7,6 +7,7 @@ import { MainLayout } from './components/layout/MainLayout';
 import { Dashboard } from './pages/Dashboard';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
+import { Model } from './pages/Model';
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="home" element={<Home />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="model" element={<Model />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
