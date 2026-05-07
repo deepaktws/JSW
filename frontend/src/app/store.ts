@@ -14,5 +14,9 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(api.middleware),
 });
 
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
 // Enable refetchOnFocus/refetchOnReconnect behaviors in the browser.
 setupListeners(store.dispatch);
+

@@ -1,5 +1,7 @@
+import type { ThemeConfig } from 'antd';
+
 /** Ant Design theme tokens — adjust here for global look & feel. */
-export const antdTheme = {
+export const antdTheme: ThemeConfig = {
   token: {
     colorPrimary: '#2563eb',
     borderRadius: 8,
@@ -14,3 +16,4 @@ export const antdTheme = {
     },
   },
 };
+

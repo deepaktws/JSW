@@ -1,8 +1,29 @@
 import { Alert, Button, List, Spin, Typography } from 'antd';
-import { useGetUsersQuery } from '../services/api';
+import { useGetUsersQuery, type AuthUser } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import type { FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
 const { Title, Text } = Typography;
+
+function getErrorMessage(err: unknown): string {
+  if (!err) return 'Unknown error';
+  if (typeof err === 'string') return err;
+  if (typeof err === 'object' && err) {
+    const record = err as Record<string, unknown>;
+    const maybeError = record.error;
+    if (typeof maybeError === 'string') return maybeError;
+
+    const qErr = err as FetchBaseQueryError;
+    if ('data' in qErr) {
+      const data = (qErr as { data?: unknown }).data;
+      if (typeof data === 'object' && data) {
+        const msg = (data as Record<string, unknown>).message;
+        if (typeof msg === 'string') return msg;
+      }
+    }
+  }
+  return 'Unknown error';
+}
 
 export function Dashboard() {
   const { token } = useAuth();
@@ -40,19 +61,21 @@ export function Dashboard() {
           type="error"
           showIcon
           message="Could not load users."
-          description={error?.data?.message || error?.error || 'Unknown error'}
+          description={getErrorMessage(error)}
         />
       )}
 
       {data?.users && (
-        <List
+        <List<AuthUser>
           className="mt-4"
           bordered
           dataSource={data.users}
           renderItem={(u) => (
             <List.Item>
               <List.Item.Meta title={u.name} description={u.email} />
-              <Text type="secondary">{new Date(u.createdAt).toLocaleString()}</Text>
+              <Text type="secondary">
+                {u.createdAt ? new Date(u.createdAt).toLocaleString() : '—'}
+              </Text>
             </List.Item>
           )}
         />
@@ -60,3 +83,4 @@ export function Dashboard() {
     </div>
   );
 }
+
