@@ -3,13 +3,13 @@ import { FileExcelOutlined, PlayCircleOutlined, UploadOutlined } from '@ant-desi
 import { Button, Card, Space, Typography, Upload, message } from 'antd';
 import { ExcelWorkbookView } from '../components/excel/ExcelWorkbookView';
 import { parseExcelWorkbook } from '../utils/parseExcelWorkbook';
-
+import { useNavigate } from 'react-router-dom';
 const { Text, Title } = Typography;
 
 export function Home() {
   const [parsing, setParsing] = useState(false);
   const [sheets, setSheets] = useState([]);
-
+  const navigate = useNavigate();
   const hasExcel = sheets.length > 0;
   const totalRows = sheets.reduce((count, sheet) => count + sheet.rowCount, 0);
 
@@ -44,7 +44,7 @@ export function Home() {
 
   const handleSendToModel = () => {
     if (!hasExcel) return;
-    message.info('Send to model — wire your API here with the current sheet data.');
+    navigate('/model');
   };
 
   return (
@@ -53,7 +53,7 @@ export function Home() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <Title level={3} className="!mb-1 !text-secondary">
-              Workbook Playground
+              Excel Playground
             </Title>
             <Text className="!text-secondary/70">
               Upload an Excel file, review parsed sheets, edit values, and run your model.
@@ -105,13 +105,13 @@ export function Home() {
         <>
           <div className="grid gap-3 sm:grid-cols-2">
             <Card className="!rounded-2xl !border-secondary-border/30 !bg-secondary/10">
-              <Text className="!text-secondary/70">Sheets</Text>
+              <Text className="!text-secondary/70">{sheets.length>1 ? "Sheets" : "Sheet"}</Text>
               <Title level={4} className="!mb-0 !mt-1 !text-secondary">
                 {sheets.length}
               </Title>
             </Card>
             <Card className="!rounded-2xl !border-secondary-border/30 !bg-secondary/10">
-              <Text className="!text-secondary/70">Rows</Text>
+              <Text className="!text-secondary/70">{totalRows>1 ? "Rows" : "Row"}</Text>
               <Title level={4} className="!mb-0 !mt-1 !text-secondary">
                 {totalRows}
               </Title>
