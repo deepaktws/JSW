@@ -1,9 +1,20 @@
+import type { Request, Response, NextFunction } from 'express';
+
+interface HttpError extends Error {
+  status?: number;
+  statusCode?: number;
+}
+
 /**
  * Central Express error handler — returns JSON and avoids leaking stack in production.
  */
-// eslint-disable-next-line no-unused-vars
-export function errorHandler(err, req, res, next) {
-  const status = err.status || err.statusCode || 500;
+export function errorHandler(
+  err: HttpError,
+  _req: Request,
+  res: Response,
+  _next: NextFunction,
+): void {
+  const status = err.status ?? err.statusCode ?? 500;
   const message = err.message || 'Internal Server Error';
 
   if (process.env.NODE_ENV !== 'production') {
@@ -19,6 +30,6 @@ export function errorHandler(err, req, res, next) {
 /**
  * 404 handler for undefined routes.
  */
-export function notFoundHandler(req, res) {
+export function notFoundHandler(req: Request, res: Response): void {
   res.status(404).json({ message: `Route not found: ${req.method} ${req.originalUrl}` });
 }

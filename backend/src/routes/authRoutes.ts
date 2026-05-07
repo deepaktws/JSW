@@ -7,10 +7,7 @@ const router = Router();
 
 router.post(
   '/login',
-  [
-    body('email').isEmail().normalizeEmail(),
-    body('password').notEmpty(),
-  ],
+  [body('email').isEmail().normalizeEmail(), body('password').notEmpty()],
   authController.login,
 );
 

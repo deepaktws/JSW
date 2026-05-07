@@ -1,5 +1,6 @@
 import { prisma } from '../config/database.js';
 import { hashPassword } from '../lib/hash.js';
+import { AppError } from '../lib/errors.js';
 
 /** Fields returned for user records (never includes password or timestamps). */
 export const userPublicSelect = {
@@ -7,15 +8,25 @@ export const userPublicSelect = {
   name: true,
   email: true,
   isActive: true,
-};
+} as const;
+
+export interface CreateUserInput {
+  name?: string;
+  email: string;
+  password: string;
+  isActive?: boolean;
+}
 
 /**
  * Lists users that are active (paginated).
- *
- * @param {{ skip: number, limit: number }} args
- * @returns {Promise<{ users: object[], total: number }>}
  */
-export async function listUsers({ skip, limit }) {
+export async function listUsers({
+  skip,
+  limit,
+}: {
+  skip: number;
+  limit: number;
+}): Promise<{ users: object[]; total: number }> {
   const where = { isActive: true };
 
   const [users, total] = await prisma.$transaction([
@@ -35,16 +46,18 @@ export async function listUsers({ skip, limit }) {
 /**
  * Creates one or more users with partial success support.
  * Returns both successful creations and failures.
- * @param {Array<{name: string, email: string, password: string}>} users
- * @param {string} creatorId - UUID of the authenticated user creating these users
- * @returns {Promise<{created: Array, failed: Array}>} Created users and failures with reasons
  */
-export async function createUsers(users, creatorId) {
-  const created = [];
-  const failed = [];
-  const seenEmails = new Set();
+export async function createUsers(
+  users: CreateUserInput[],
+  creatorId: string,
+): Promise<{
+  created: Array<{ index: number; user: object }>;
+  failed: Array<{ index: number; email: string; name?: string; reason: string }>;
+}> {
+  const created: Array<{ index: number; user: object }> = [];
+  const failed: Array<{ index: number; email: string; name?: string; reason: string }> = [];
+  const seenEmails = new Set<string>();
 
-  // Batch check all emails against DB upfront
   const emailList = users.map((u) => u.email.toLowerCase());
   const existingUsers = await prisma.user.findMany({
     where: { email: { in: emailList } },
@@ -82,7 +95,8 @@ export async function createUsers(users, creatorId) {
       });
       created.push({ index, user: createdUser });
     } catch (err) {
-      failed.push({ index, email: user.email, name: user.name, reason: err.message || 'Failed to create user' });
+      const message = err instanceof Error ? err.message : 'Failed to create user';
+      failed.push({ index, email: user.email, name: user.name, reason: message });
     }
   }
 
@@ -92,7 +106,7 @@ export async function createUsers(users, creatorId) {
 /**
  * Returns one active user by id, or null if missing or inactive.
  */
-export async function getUserById(id) {
+export async function getUserById(id: string) {
   return prisma.user.findFirst({
     where: { id, isActive: true },
     select: userPublicSelect,
@@ -102,14 +116,16 @@ export async function getUserById(id) {
 /**
  * Partial update; omit password to leave unchanged.
  */
-export async function updateUser(id, { name, email, password }, updaterId) {
+export async function updateUser(
+  id: string,
+  { name, email, password }: { name?: string; email?: string; password?: string },
+  updaterId: string,
+) {
   const existing = await prisma.user.findFirst({
     where: { id, isActive: true },
   });
   if (!existing) {
-    const err = new Error('User not found');
-    err.status = 404;
-    throw err;
+    throw new AppError('User not found', 404);
   }
 
   if (email !== undefined && email !== existing.email) {
@@ -117,13 +133,11 @@ export async function updateUser(id, { name, email, password }, updaterId) {
       where: { email, NOT: { id } },
     });
     if (taken) {
-      const err = new Error('Email already in use');
-      err.status = 409;
-      throw err;
+      throw new AppError('Email already in use', 409);
     }
   }
 
-  const data = { updatedBy: updaterId };
+  const data: Record<string, unknown> = { updatedBy: updaterId };
   if (name !== undefined) data.name = name;
   if (email !== undefined) data.email = email;
   if (password !== undefined && password.length > 0) {
@@ -140,14 +154,12 @@ export async function updateUser(id, { name, email, password }, updaterId) {
 /**
  * Soft-delete: sets deletedAt to now, isActive to false, and tracks who deleted.
  */
-export async function softDeleteUser(id, deleterId) {
+export async function softDeleteUser(id: string, deleterId: string) {
   const row = await prisma.user.findFirst({
     where: { id, isActive: true },
   });
   if (!row) {
-    const err = new Error('User not found');
-    err.status = 404;
-    throw err;
+    throw new AppError('User not found', 404);
   }
 
   return prisma.user.update({

@@ -1,18 +1,18 @@
 import { Router } from 'express';
-import multer from 'multer';
+import multer, { type FileFilterCallback } from 'multer';
+import type { Request } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import * as excelController from '../controllers/excelController.js';
+import { AppError } from '../lib/errors.js';
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req: Request, file: Express.Multer.File, cb: FileFilterCallback) => {
     if (/\.xlsx?$/i.test(file.originalname)) {
       cb(null, true);
     } else {
-      const err = new Error('Only Excel files (.xls, .xlsx) are allowed');
-      err.status = 400;
-      cb(err);
+      cb(new AppError('Only Excel files (.xls, .xlsx) are allowed', 400));
     }
   },
 });

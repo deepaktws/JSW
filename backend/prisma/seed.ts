@@ -11,7 +11,7 @@ import { PrismaClient } from '@prisma/client';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const backendRoot = path.join(__dirname, '..');
 
-function loadDatabaseUrl() {
+function loadDatabaseUrl(): void {
   const candidates = [
     path.join(backendRoot, '.env'),
     path.join(process.cwd(), '.env'),
@@ -36,7 +36,7 @@ const prisma = new PrismaClient();
 
 const SYSTEM_UUID = '00000000-0000-0000-0000-000000000000';
 
-async function main() {
+async function main(): Promise<void> {
   const password = await bcrypt.hash('password123', 12);
 
   await prisma.user.upsert({
