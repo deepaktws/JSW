@@ -6,8 +6,7 @@ export const openapiSpec = {
   info: {
     title: 'JSW API',
     version: '1.0.0',
-    description:
-      'Express + Prisma API. Use **Authorize** with a JWT from `POST /auth/login` or `POST /auth/register`.',
+    description: 'Express + Prisma API. Use **Authorize** with a JWT from `POST /auth/login`.',
   },
   servers: [{ url: '/', description: 'Same origin as this server (e.g. http://localhost:5050)' }],
   tags: [
@@ -31,10 +30,10 @@ export const openapiSpec = {
           id: { type: 'string', format: 'uuid' },
           name: { type: 'string' },
           email: { type: 'string', format: 'email' },
-          createdAt: { type: 'string', format: 'date-time' },
-          updatedAt: { type: 'string', format: 'date-time' },
           isActive: { type: 'boolean' },
-          deletedAt: { type: 'string', format: 'date-time', nullable: true },
+          createdBy: { type: 'string', format: 'uuid' },
+          updatedBy: { type: 'string', format: 'uuid' },
+          deletedBy: { type: 'string', format: 'uuid', nullable: true },
         },
       },
       UserPatchBody: {
@@ -75,6 +74,47 @@ export const openapiSpec = {
             items: { $ref: '#/components/schemas/User' },
           },
           meta: { $ref: '#/components/schemas/PaginationMeta' },
+        },
+      },
+      UserCreateInput: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          name: { type: 'string' },
+          email: { type: 'string', format: 'email' },
+          password: { type: 'string', minLength: 8 },
+          isActive: { type: 'boolean', default: true },
+        },
+      },
+      UserCreateResponse: {
+        type: 'object',
+        properties: {
+          created: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/User' },
+            description: 'Successfully created users',
+          },
+          failed: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                index: { type: 'integer', description: 'Index in request array' },
+                email: { type: 'string' },
+                name: { type: 'string' },
+                reason: { type: 'string', description: 'Failure reason' },
+              },
+            },
+            description: 'Users that failed to create with reasons',
+          },
+          summary: {
+            type: 'object',
+            properties: {
+              total: { type: 'integer' },
+              succeeded: { type: 'integer' },
+              failed: { type: 'integer' },
+            },
+          },
         },
       },
       AuthResponse: {
@@ -129,57 +169,6 @@ export const openapiSpec = {
                 schema: {
                   type: 'object',
                   properties: { status: { type: 'string', example: 'ok' } },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    '/auth/register': {
-      post: {
-        tags: ['Auth'],
-        summary: 'Register',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['name', 'email', 'password'],
-                properties: {
-                  name: { type: 'string' },
-                  email: { type: 'string', format: 'email' },
-                  password: { type: 'string', minLength: 8 },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          201: {
-            description: 'Created',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/AuthResponse' },
-              },
-            },
-          },
-          400: {
-            description: 'Validation failed',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/ValidationError' },
-              },
-            },
-          },
-          409: {
-            description: 'Email already registered',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: { message: { type: 'string' } },
                 },
               },
             },
@@ -261,6 +250,70 @@ export const openapiSpec = {
       },
     },
     '/users': {
+      post: {
+        tags: ['Users'],
+        summary: 'Create users (bulk only - array required)',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'array',
+                minItems: 1,
+                items: { $ref: '#/components/schemas/UserCreateInput' },
+              },
+              examples: {
+                single: {
+                  summary: 'Single user (still requires array)',
+                  value: [
+                    {
+                      name: 'John Doe',
+                      email: 'john@example.com',
+                      password: 'securepass123',
+                    },
+                  ],
+                },
+                bulk: {
+                  summary: 'Multiple users',
+                  value: [
+                    { name: 'Alice', email: 'alice@example.com', password: 'pass12345' },
+                    { name: 'Bob', email: 'bob@example.com', password: 'pass67890' },
+                    { name: 'Charlie', email: 'charlie@example.com', password: 'pass11111' },
+                  ],
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: 'All users created successfully',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UserCreateResponse' },
+              },
+            },
+          },
+          207: {
+            description: 'Partial success - some users created, some failed',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UserCreateResponse' },
+              },
+            },
+          },
+          400: {
+            description: 'Validation failed or all users failed to create',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/UserCreateResponse' },
+              },
+            },
+          },
+          401: { description: 'Unauthorized' },
+        },
+      },
       get: {
         tags: ['Users'],
         summary: 'List users (not soft-deleted), paginated',

@@ -9,11 +9,15 @@ datasource db {
 
 model User {
   id        String    @id @default(uuid()) @db.Uuid
-  name      String
+  name      String?
   email     String    @unique
   password  String
   createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime?
   isActive  Boolean   @default(true)
-  updatedAt DateTime  @default(now()) @updatedAt
+
+  createdBy String    @default("00000000-0000-0000-0000-000000000000") @db.Uuid
+  updatedBy String    @default("00000000-0000-0000-0000-000000000000") @db.Uuid
+  deletedBy String?   @db.Uuid
 }

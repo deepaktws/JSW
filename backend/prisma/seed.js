@@ -34,6 +34,8 @@ if (!process.env.DATABASE_URL) {
 
 const prisma = new PrismaClient();
 
+const SYSTEM_UUID = '00000000-0000-0000-0000-000000000000';
+
 async function main() {
   const password = await bcrypt.hash('password123', 12);
 
@@ -44,6 +46,8 @@ async function main() {
       name: 'Admin User',
       email: 'admin@example.com',
       password,
+      createdBy: SYSTEM_UUID,
+      updatedBy: SYSTEM_UUID,
     },
   });
 
@@ -54,6 +58,8 @@ async function main() {
       name: 'Demo User',
       email: 'user@example.com',
       password,
+      createdBy: SYSTEM_UUID,
+      updatedBy: SYSTEM_UUID,
     },
   });
 
