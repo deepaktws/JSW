@@ -6,3 +6,4 @@ export function RootRedirect() {
   const { isAuthenticated } = useAuth();
   return <Navigate to={isAuthenticated ? '/home' : '/login'} replace />;
 }
+

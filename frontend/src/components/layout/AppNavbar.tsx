@@ -1,7 +1,12 @@
 import { Button } from 'antd';
 import { Link } from 'react-router-dom';
 
-export function AppNavbar({ showLogout = false, onLogout }) {
+type AppNavbarProps = {
+  showLogout?: boolean;
+  onLogout?: () => void;
+};
+
+export function AppNavbar({ showLogout = false, onLogout }: AppNavbarProps) {
   return (
     <header className="sticky top-0 z-20 border-b border-secondary-border/80 bg-secondary/95 backdrop-blur">
       <div className="relative mx-auto flex h-16 w-full items-center justify-between px-4">
@@ -30,3 +35,4 @@ export function AppNavbar({ showLogout = false, onLogout }) {
     </header>
   );
 }
+

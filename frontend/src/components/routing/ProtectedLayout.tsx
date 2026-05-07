@@ -12,3 +12,4 @@ export function ProtectedLayout() {
 
   return <Outlet />;
 }
+

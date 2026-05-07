@@ -1,19 +1,41 @@
 import { useNavigate } from 'react-router-dom';
-import { MdEmail ,MdLock } from "react-icons/md";
-import { FaUser } from "react-icons/fa";
+import { MdEmail, MdLock } from 'react-icons/md';
+import { FaUser } from 'react-icons/fa';
 import { Alert, Button, Card, Form, Input, Space, Typography } from 'antd';
 import { useLoginMutation } from '../services/api';
 
 const { Title, Text } = Typography;
 
-function formatMutationError(err) {
+type LoginFormValues = {
+  email: string;
+  password: string;
+};
+
+function formatMutationError(err: unknown): string | null {
   if (!err) return null;
-  const data = err.data;
-  if (data?.message && typeof data.message === 'string') return data.message;
-  if (Array.isArray(data?.errors)) {
-    return data.errors.map((e) => e.msg || e.message || JSON.stringify(e)).join('; ');
+  if (typeof err !== 'object') return 'Request failed';
+  const record = err as Record<string, unknown>;
+
+  const data = record.data;
+  if (typeof data === 'object' && data) {
+    const dataRecord = data as Record<string, unknown>;
+    if (typeof dataRecord.message === 'string') return dataRecord.message;
+    if (Array.isArray(dataRecord.errors)) {
+      return dataRecord.errors
+        .map((e) => {
+          if (typeof e === 'string') return e;
+          if (typeof e === 'object' && e) {
+            const er = e as Record<string, unknown>;
+            if (typeof er.msg === 'string') return er.msg;
+            if (typeof er.message === 'string') return er.message;
+          }
+          return JSON.stringify(e);
+        })
+        .join('; ');
+    }
   }
-  if (typeof err.error === 'string') return err.error;
+
+  if (typeof record.error === 'string') return record.error;
   return 'Request failed';
 }
 
@@ -24,7 +46,7 @@ export function Login() {
   const busy = loginState.isLoading;
   const error = formatMutationError(loginState.error);
 
-  async function handleFinish(values) {
+  async function handleFinish(values: LoginFormValues) {
     try {
       await login({ email: values.email, password: values.password }).unwrap();
       navigate('/home', { replace: true });
@@ -43,12 +65,15 @@ export function Login() {
           <Title level={3} className="mb-1 text-secondary-foreground">
             Sign in with email
           </Title>
-          <Text className="text-secondary">
-            Use your account credentials to continue.
-          </Text>
+          <Text className="text-secondary">Use your account credentials to continue.</Text>
         </div>
 
-        <Form layout="vertical" requiredMark={false} onFinish={handleFinish} className="space-y-1">
+        <Form<LoginFormValues>
+          layout="vertical"
+          requiredMark={false}
+          onFinish={handleFinish}
+          className="space-y-1"
+        >
           <Form.Item
             name="email"
             className="!mb-3"
@@ -100,3 +125,4 @@ export function Login() {
     </Card>
   );
 }
+

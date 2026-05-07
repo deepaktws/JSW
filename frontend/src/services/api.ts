@@ -1,5 +1,27 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
+type LoginCredentials = {
+  email: string;
+  password: string;
+};
+
+export type AuthUser = {
+  id?: string | number;
+  name?: string;
+  email?: string;
+  createdAt?: string;
+  [key: string]: unknown;
+};
+
+type AuthResponse = {
+  token: string;
+  user: AuthUser;
+};
+
+type UsersResponse = {
+  users: AuthUser[];
+};
+
 /**
  * API base URL from Vite env (injected at build time). Falls back for local dev.
  */
@@ -13,7 +35,8 @@ export const api = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl,
     prepareHeaders: (headers, { getState }) => {
-      const token = getState().auth?.token;
+      const state = getState() as { auth?: { token?: string | null } } | undefined;
+      const token = state?.auth?.token;
       if (token) {
         headers.set('Authorization', `Bearer ${token}`);
       }
@@ -22,21 +45,21 @@ export const api = createApi({
   }),
   tagTypes: ['User'],
   endpoints: (builder) => ({
-    login: builder.mutation({
+    login: builder.mutation<AuthResponse, LoginCredentials>({
       query: (credentials) => ({
         url: '/auth/login',
         method: 'POST',
         body: credentials,
       }),
     }),
-    register: builder.mutation({
+    register: builder.mutation<AuthResponse, { email: string; password: string; name?: string }>({
       query: (payload) => ({
         url: '/auth/register',
         method: 'POST',
         body: payload,
       }),
     }),
-    getUsers: builder.query({
+    getUsers: builder.query<UsersResponse, void>({
       query: () => '/users',
       providesTags: ['User'],
     }),
@@ -44,3 +67,4 @@ export const api = createApi({
 });
 
 export const { useLoginMutation, useRegisterMutation, useGetUsersQuery } = api;
+

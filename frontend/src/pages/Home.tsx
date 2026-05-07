@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { FileExcelOutlined, PlayCircleOutlined, UploadOutlined } from '@ant-design/icons';
-import { Button, Card, Space, Typography, Upload, message } from 'antd';
+import { Button, Card, Typography, Upload, message } from 'antd';
+import type { UploadProps } from 'antd';
 import { ExcelWorkbookView } from '../components/excel/ExcelWorkbookView';
 import { parseExcelWorkbook } from '../utils/parseExcelWorkbook';
 import { useNavigate } from 'react-router-dom';
@@ -13,16 +14,17 @@ export function Home() {
   const hasExcel = sheets.length > 0;
   const totalRows = sheets.reduce((count, sheet) => count + sheet.rowCount, 0);
 
-  const handleBeforeUpload = (file) => {
+  const handleBeforeUpload: UploadProps['beforeUpload'] = (file) => {
     void (async () => {
       setParsing(true);
       try {
-        const { sheets: nextSheets } = await parseExcelWorkbook(file);
+        const { sheets: nextSheets } = await parseExcelWorkbook(file as File);
         setSheets(nextSheets);
-        const totalRows = nextSheets.reduce((n, s) => n + s.rowCount, 0);
-        message.success(`Loaded ${nextSheets.length} sheet(s), ${totalRows} row(s).`);
+        const nextTotalRows = nextSheets.reduce((n, s) => n + s.rowCount, 0);
+        message.success(`Loaded ${nextSheets.length} sheet(s), ${nextTotalRows} row(s).`);
       } catch (err) {
-        message.error(err?.message || 'Could not read that file');
+        const msg = err instanceof Error ? err.message : 'Could not read that file';
+        message.error(msg);
         setSheets([]);
       } finally {
         setParsing(false);
@@ -31,16 +33,19 @@ export function Home() {
     return false;
   };
 
-  const updateCell = useCallback((sheetIndex, rowIndex, key, value) => {
-    setSheets((prev) =>
-      prev.map((s, si) => {
-        if (si !== sheetIndex) return s;
-        const rows = [...s.rows];
-        rows[rowIndex] = { ...rows[rowIndex], [key]: value };
-        return { ...s, rows };
-      }),
-    );
-  }, []);
+  const updateCell = useCallback(
+    (sheetIndex: number, rowIndex: number, key: string, value: string) => {
+      setSheets((prev) =>
+        prev.map((s, si) => {
+          if (si !== sheetIndex) return s;
+          const rows = [...s.rows];
+          rows[rowIndex] = { ...rows[rowIndex], [key]: value };
+          return { ...s, rows };
+        }),
+      );
+    },
+    [],
+  );
 
   const handleSendToModel = () => {
     if (!hasExcel) return;
@@ -125,3 +130,4 @@ export function Home() {
     </div>
   );
 }
+

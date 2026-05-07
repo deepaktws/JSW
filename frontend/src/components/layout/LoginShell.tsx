@@ -1,10 +1,15 @@
+import type { ReactNode } from 'react';
 import { Layout } from 'antd';
 import { AppNavbar } from './AppNavbar';
 
 const { Content } = Layout;
 
+type LoginShellProps = {
+  children: ReactNode;
+};
+
 /** Full-viewport centered shell for auth screens (matches Ant Design page background). */
-export function LoginShell({ children }) {
+export function LoginShell({ children }: LoginShellProps) {
   return (
     <Layout className="relative min-h-screen overflow-hidden bg-secondary/10">
       <AppNavbar />
@@ -22,3 +27,4 @@ export function LoginShell({ children }) {
     </Layout>
   );
 }
+

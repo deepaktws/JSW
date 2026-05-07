@@ -3,11 +3,12 @@ import { useDispatch } from 'react-redux';
 import { Outlet } from 'react-router-dom';
 import { AppNavbar } from './AppNavbar';
 import { logout } from '../../features/auth/authSlice';
+import type { AppDispatch } from '../../app/store';
 
 const { Content } = Layout;
 
 export function MainLayout() {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   return (
     <Layout className="min-h-screen bg-secondary/5">
@@ -18,3 +19,4 @@ export function MainLayout() {
     </Layout>
   );
 }
+
