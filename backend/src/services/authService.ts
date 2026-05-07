@@ -47,6 +47,7 @@ export async function loginUser({ email, password }: { email: string; password: 
     throw new AppError('Invalid email or password', 401);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _pwd, ...safeUser } = user;
 
   const token = signToken(safeUser);
