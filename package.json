@@ -1,0 +1,10 @@
+{
+  "name": "jsw-monorepo",
+  "private": true,
+  "scripts": {
+    "test": "npm --prefix backend test && npm --prefix frontend test",
+    "test:backend": "npm --prefix backend test",
+    "test:frontend": "npm --prefix frontend test",
+    "test:coverage": "npm --prefix backend test:coverage && npm --prefix frontend test:coverage"
+  }
+}
