@@ -20,4 +20,6 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET || 'dev-only-change-in-production',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  fastApiUrl: process.env.FASTAPI_URL || 'http://127.0.0.1:8000',
+  fastApiTimeoutMs: Number(process.env.FASTAPI_TIMEOUT_MS) || 120000,
 };
