@@ -1,81 +1,92 @@
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { PrismaClient } from '@prisma/client';
+import { getFilePath } from '../lib/filePaths.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const TEMP_DIR = path.join(__dirname, '..', '..', 'uploads', 'temp');
+const prisma = new PrismaClient();
 
 /**
- * Delete ALL temp files regardless of age.
- * Used by cron job to clean up abandoned upload sessions.
+ * Clean up old files, keeping only the last 50 most recent files globally.
+ * Marks files as DELETED in the database and removes physical files from disk.
+ * Used by cron job to maintain storage limits.
  */
-export function cleanupTempFiles(): void {
+export async function cleanupOldFiles(): Promise<void> {
   try {
-    if (!fs.existsSync(TEMP_DIR)) {
-      console.log('[Cleanup] Temp directory does not exist, skipping cleanup');
+    console.log('[Cleanup] Starting old file cleanup...');
+
+    const totalCount = await prisma.file.count({
+      where: {
+        status: 'UPLOADED',
+      },
+    });
+
+    if (totalCount <= 50) {
+      console.log(`[Cleanup] Only ${totalCount} files exist, no cleanup needed (keeping last 50)`);
       return;
     }
 
-    const tempDirs = fs.readdirSync(TEMP_DIR);
-    const count = tempDirs.length;
+    const filesToDelete = await prisma.file.findMany({
+      where: {
+        status: 'UPLOADED',
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip: 50,
+      select: {
+        id: true,
+        userId: true,
+        originalName: true,
+        sizeBytes: true,
+      },
+    });
 
-    if (count === 0) {
-      console.log('[Cleanup] No temp directories to clean up');
-      return;
-    }
+    console.log(`[Cleanup] Found ${filesToDelete.length} files to delete (keeping 50 most recent)`);
 
     let totalSize = 0;
+    const successfullyDeletedIds: string[] = [];
+    const deletionErrors: Array<{ id: string; name: string; error: unknown }> = [];
 
-    for (const dirName of tempDirs) {
-      const dirPath = path.join(TEMP_DIR, dirName);
-
+    for (const file of filesToDelete) {
       try {
-        const stats = fs.statSync(dirPath);
+        const filePath = getFilePath(file);
+        let fileSize = file.sizeBytes;
 
-        if (stats.isDirectory()) {
-          const dirSize = getDirectorySize(dirPath);
-          totalSize += dirSize;
-
-          fs.rmSync(dirPath, { recursive: true, force: true });
-          console.log(`[Cleanup] Deleted temp directory: ${dirName} (${formatBytes(dirSize)})`);
+        if (fs.existsSync(filePath)) {
+          const stats = fs.statSync(filePath);
+          fileSize = stats.size;
+          
+          fs.unlinkSync(filePath);
+          totalSize += fileSize;
+        } else {
+          console.log(`[Cleanup] File not found on disk (already deleted): ${file.originalName}`);
         }
+
+        successfullyDeletedIds.push(file.id);
+        console.log(`[Cleanup] Deleted: ${file.originalName} (${formatBytes(fileSize)})`);
       } catch (err) {
-        console.error(`[Cleanup] Error processing directory ${dirName}:`, err);
+        deletionErrors.push({ id: file.id, name: file.originalName, error: err });
+        console.error(`[Cleanup] Error deleting file ${file.originalName}:`, err);
       }
     }
 
-    console.log(`[Cleanup] Complete: ${count} temp directories deleted, ${formatBytes(totalSize)} freed`);
+    if (successfullyDeletedIds.length > 0) {
+      await prisma.file.updateMany({
+        where: {
+          id: {
+            in: successfullyDeletedIds,
+          },
+        },
+        data: {
+          status: 'DELETED',
+          deletedAt: new Date(),
+        },
+      });
+    }
+
+    console.log(`[Cleanup] Complete: ${successfullyDeletedIds.length} files deleted, ${deletionErrors.length} errors, ${formatBytes(totalSize)} freed`);
   } catch (error) {
-    console.error('[Cleanup] Error during temp file cleanup:', error);
+    console.error('[Cleanup] Error during old file cleanup:', error);
   }
-}
-
-/**
- * Calculate total size of a directory recursively.
- */
-function getDirectorySize(dirPath: string): number {
-  let totalSize = 0;
-
-  try {
-    const items = fs.readdirSync(dirPath);
-
-    for (const item of items) {
-      const itemPath = path.join(dirPath, item);
-      const stats = fs.statSync(itemPath);
-
-      if (stats.isDirectory()) {
-        totalSize += getDirectorySize(itemPath);
-      } else {
-        totalSize += stats.size;
-      }
-    }
-  } catch {
-    // Ignore errors for individual items
-  }
-
-  return totalSize;
 }
 
 /**

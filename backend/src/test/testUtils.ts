@@ -101,7 +101,7 @@ export function mockFile({
   originalName = 'test.txt',
   sizeBytes = 1024,
   mimeType = 'text/plain',
-  status = 'ACTIVE',
+  status = 'UPLOADED',
   createdAt = new Date(),
   deletedAt = null,
 }: MockFileOptions = {}) {

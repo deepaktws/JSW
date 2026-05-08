@@ -118,7 +118,7 @@ describe('fileService', () => {
         originalName: 'test.txt',
         sizeBytes: 30,
         mimeType: 'text/plain',
-        status: 'ACTIVE' as const,
+        status: 'UPLOADED' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
@@ -153,7 +153,7 @@ describe('fileService', () => {
           originalName: 'test.txt',
           sizeBytes: 30,
           mimeType: 'text/plain',
-          status: 'ACTIVE',
+          status: 'UPLOADED',
         },
       });
     });
@@ -252,7 +252,7 @@ describe('fileService', () => {
         originalName: 'test.txt',
         sizeBytes: 1024,
         mimeType: 'text/plain',
-        status: 'ACTIVE' as const,
+        status: 'UPLOADED' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
@@ -266,7 +266,7 @@ describe('fileService', () => {
       expect(prisma.file.findFirst).toHaveBeenCalledWith({
         where: {
           id: 'file-123',
-          status: 'ACTIVE',
+          status: 'UPLOADED',
         },
       });
     });
@@ -286,7 +286,7 @@ describe('fileService', () => {
         originalName: 'test.txt',
         sizeBytes: 1024,
         mimeType: 'text/plain',
-        status: 'ACTIVE' as const,
+        status: 'UPLOADED' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
@@ -308,7 +308,7 @@ describe('fileService', () => {
         originalName: 'test.txt',
         sizeBytes: 1024,
         mimeType: 'text/plain',
-        status: 'ACTIVE' as const,
+        status: 'UPLOADED' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,
@@ -326,8 +326,8 @@ describe('fileService', () => {
   describe('listUserFiles', () => {
     test('should return paginated files for user', async () => {
       const mockFiles = [
-        { id: 'file-1', userId: 'user-123', originalName: 'file1.txt', sizeBytes: 100, mimeType: 'text/plain', status: 'ACTIVE' as const, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
-        { id: 'file-2', userId: 'user-123', originalName: 'file2.txt', sizeBytes: 200, mimeType: 'text/plain', status: 'ACTIVE' as const, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
+        { id: 'file-1', userId: 'user-123', originalName: 'file1.txt', sizeBytes: 100, mimeType: 'text/plain', status: 'UPLOADED' as const, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
+        { id: 'file-2', userId: 'user-123', originalName: 'file2.txt', sizeBytes: 200, mimeType: 'text/plain', status: 'UPLOADED' as const, createdAt: new Date(), updatedAt: new Date(), deletedAt: null },
       ];
 
       jest.mocked(prisma.$transaction).mockResolvedValue([mockFiles, 10] as never);
@@ -354,7 +354,7 @@ describe('fileService', () => {
         originalName: 'test.txt',
         sizeBytes: 1024,
         mimeType: 'text/plain',
-        status: 'ACTIVE' as const,
+        status: 'UPLOADED' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
         deletedAt: null,

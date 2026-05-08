@@ -215,7 +215,7 @@ async function finalizeUpload(fileId: string, metadata: UploadMetadata): Promise
         originalName: metadata.originalName,
         sizeBytes,
         mimeType: metadata.mimeType,
-        status: 'ACTIVE',
+        status: 'UPLOADED',
       },
     });
 
@@ -239,13 +239,13 @@ async function finalizeUpload(fileId: string, metadata: UploadMetadata): Promise
 }
 
 /**
- * Get a file by ID (only active files).
+ * Get a file by ID (only uploaded files).
  */
 export async function getFileById(fileId: string): Promise<File> {
   const file = await prisma.file.findFirst({
     where: {
       id: fileId,
-      status: 'ACTIVE',
+      status: 'UPLOADED',
     },
   });
 
@@ -271,7 +271,7 @@ export async function getFileForDownload(fileId: string): Promise<{ file: File; 
 }
 
 /**
- * List all active files for a user (paginated).
+ * List all uploaded files for a user (paginated).
  */
 export async function listUserFiles({
   userId,
@@ -284,7 +284,7 @@ export async function listUserFiles({
 }): Promise<{ files: File[]; total: number }> {
   const where = {
     userId,
-    status: 'ACTIVE' as const,
+    status: 'UPLOADED' as const,
   };
 
   const [files, total] = await prisma.$transaction([
@@ -308,7 +308,7 @@ export async function softDeleteFile(fileId: string, userId: string): Promise<Fi
     where: {
       id: fileId,
       userId,
-      status: 'ACTIVE',
+      status: 'UPLOADED',
     },
   });
 
