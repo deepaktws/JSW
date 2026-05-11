@@ -33,7 +33,7 @@ model File {
   sizeBytes    Int
   mimeType     String
   
-  status       FileStatus @default(ACTIVE)
+  status       FileStatus @default(UPLOADED)
   
   deletedAt    DateTime?
   createdAt    DateTime   @default(now())
@@ -44,6 +44,6 @@ model File {
 }
 
 enum FileStatus {
-  ACTIVE
+  UPLOADED
   DELETED
 }
