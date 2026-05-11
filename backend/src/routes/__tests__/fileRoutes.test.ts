@@ -1,9 +1,12 @@
-import { jest, describe, test, expect, beforeAll, beforeEach } from '@jest/globals';
+import { promises as fsPromises } from 'fs';
+import { jest, describe, test, expect, beforeAll, beforeEach, afterEach } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
 import fileRoutes from '../fileRoutes.js';
 import * as fileService from '../../services/fileService.js';
 import { authenticate } from '../../middleware/auth.js';
+
+const uploadFileId = '6f3b8b2a-1b4e-4c2d-9e8f-123456789abc';
 
 jest.mock('../../services/fileService.js');
 jest.mock('../../middleware/auth.js');
@@ -30,6 +33,11 @@ describe('File Routes', () => {
     });
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+    delete (globalThis as { fetch?: typeof fetch }).fetch;
+  });
+
   describe('POST /files/upload', () => {
     test('should upload chunk successfully', async () => {
       jest.mocked(fileService.uploadChunk).mockResolvedValue({
@@ -39,7 +47,7 @@ describe('File Routes', () => {
 
       const response = await request(app)
         .post('/files/upload')
-        .field('file_id', 'file-456')
+        .field('file_id', uploadFileId)
         .field('chunk_index', '0')
         .field('total_chunks', '3')
         .field('original_name', 'test.txt')
@@ -55,7 +63,7 @@ describe('File Routes', () => {
 
     test('should return 201 when upload completes', async () => {
       const mockFile = {
-        id: 'file-456',
+        id: uploadFileId,
         userId: 'user-123',
         originalName: 'test.txt',
         sizeBytes: 1024,
@@ -73,7 +81,7 @@ describe('File Routes', () => {
 
       const response = await request(app)
         .post('/files/upload')
-        .field('file_id', 'file-456')
+        .field('file_id', uploadFileId)
         .field('chunk_index', '2')
         .field('total_chunks', '3')
         .field('original_name', 'test.txt')
@@ -82,6 +90,41 @@ describe('File Routes', () => {
 
       expect(response.status).toBe(201);
       expect(response.body.completed).toBe(true);
+    });
+
+    test('when upload completes for Excel returns JSON like other files', async () => {
+      const mockFile = {
+        id: uploadFileId,
+        userId: 'user-123',
+        originalName: 'report.xlsx',
+        sizeBytes: 100,
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        status: 'UPLOADED' as const,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest.mocked(fileService.uploadChunk).mockResolvedValue({
+        completed: true,
+        file: mockFile,
+      });
+
+      const response = await request(app)
+        .post('/files/upload')
+        .field('file_id', uploadFileId)
+        .field('chunk_index', '0')
+        .field('total_chunks', '1')
+        .field('original_name', 'report.xlsx')
+        .field(
+          'mime_type',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        .attach('data', Buffer.from('z'), 'chunk-0');
+
+      expect(response.status).toBe(201);
+      expect(response.body.completed).toBe(true);
+      expect(response.body.file?.originalName).toBe('report.xlsx');
     });
 
     test('should return 400 for invalid file_id', async () => {
@@ -194,6 +237,98 @@ describe('File Routes', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toBe('Validation failed');
+    });
+  });
+
+  describe('POST /files/:id/send-to-model', () => {
+    test('returns processed binary when ML succeeds', async () => {
+      const mockFile = {
+        id: uploadFileId,
+        userId: 'user-123',
+        originalName: 'report.xlsx',
+        sizeBytes: 100,
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        status: 'UPLOADED' as const,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest.mocked(fileService.getFileForDownload).mockResolvedValue({
+        file: mockFile,
+        filePath: '/tmp/report.xlsx',
+      });
+
+      jest.spyOn(fsPromises, 'readFile').mockResolvedValue(Buffer.from('xlsx-bytes'));
+
+      const outBytes = new Uint8Array([80, 75, 3, 4]);
+      const mlHeaders = new Headers();
+      mlHeaders.set('content-disposition', 'attachment; filename="out.xlsx"');
+      const mlResponse = {
+        ok: true,
+        status: 200,
+        headers: mlHeaders,
+        arrayBuffer: async () => {
+          const buf = new ArrayBuffer(outBytes.byteLength);
+          new Uint8Array(buf).set(outBytes);
+          return buf;
+        },
+      } as Response;
+      globalThis.fetch = jest.fn<typeof fetch>().mockResolvedValue(mlResponse);
+
+      const response = await request(app).post(`/files/${uploadFileId}/send-to-model`);
+
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toMatch(/spreadsheet/);
+      expect(response.headers['content-disposition']).toMatch(/out\.xlsx/);
+      expect(fileService.getFileForDownload).toHaveBeenCalledWith(uploadFileId);
+    });
+
+    test('returns 400 for non-spreadsheet filename', async () => {
+      const mockFile = {
+        id: uploadFileId,
+        userId: 'user-123',
+        originalName: 'notes.txt',
+        sizeBytes: 10,
+        mimeType: 'text/plain',
+        status: 'UPLOADED' as const,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest.mocked(fileService.getFileForDownload).mockResolvedValue({
+        file: mockFile,
+        filePath: '/tmp/notes.txt',
+      });
+
+      const response = await request(app).post(`/files/${uploadFileId}/send-to-model`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.message).toContain('spreadsheet');
+    });
+
+    test('returns 403 when user does not own file', async () => {
+      const mockFile = {
+        id: uploadFileId,
+        userId: 'other-user',
+        originalName: 'report.xlsx',
+        sizeBytes: 100,
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        status: 'UPLOADED' as const,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null,
+      };
+
+      jest.mocked(fileService.getFileForDownload).mockResolvedValue({
+        file: mockFile,
+        filePath: '/tmp/report.xlsx',
+      });
+
+      const response = await request(app).post(`/files/${uploadFileId}/send-to-model`);
+
+      expect(response.status).toBe(403);
     });
   });
 

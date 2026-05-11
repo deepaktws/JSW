@@ -36,6 +36,13 @@ router.get('/:id', authenticate, [uuidParam], fileController.getFile);
 
 router.get('/:id/download', authenticate, [uuidParam], fileController.downloadFile);
 
+router.post(
+  '/:id/send-to-model',
+  authenticate,
+  [uuidParam],
+  fileController.sendStoredFileToModel,
+);
+
 router.delete('/:id', authenticate, [uuidParam], fileController.deleteFile);
 
 export default router;

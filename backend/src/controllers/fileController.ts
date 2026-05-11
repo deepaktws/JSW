@@ -1,5 +1,8 @@
+import { promises as fsPromises } from 'fs';
 import { validationResult } from 'express-validator';
 import type { Request, Response, NextFunction } from 'express';
+import { forwardExcelBufferToMl, isSpreadsheetOriginalName } from '../lib/excelMlForward.js';
+import { getFilePath } from '../lib/filePaths.js';
 import { paginatedHandler } from '../lib/pagination.js';
 import * as fileService from '../services/fileService.js';
 
@@ -115,6 +118,61 @@ export async function downloadFile(
     res.setHeader('Content-Length', file.sizeBytes);
 
     res.sendFile(filePath);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Run ML on a stored spreadsheet (original file on disk unchanged).
+ * POST /files/:id/send-to-model
+ */
+export async function sendStoredFileToModel(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+      return;
+    }
+
+    const id = String(req.params.id);
+    const { file, filePath } = await fileService.getFileForDownload(id);
+
+    if (file.userId !== req.user.id) {
+      res.status(403).json({ message: 'Access denied' });
+      return;
+    }
+
+    if (!isSpreadsheetOriginalName(file.originalName)) {
+      res.status(400).json({
+        message: 'Only spreadsheet files (.xls, .xlsx) can be sent to the model',
+      });
+      return;
+    }
+
+    const buffer = await fsPromises.readFile(filePath);
+    const ml = await forwardExcelBufferToMl(buffer, file.originalName);
+
+    if (ml.kind === 'success') {
+      res.setHeader('Content-Type', ml.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${ml.attachmentFileName}"`);
+      res.status(200).send(ml.buffer);
+      return;
+    }
+
+    if (ml.kind === 'fastapi_error') {
+      res.status(502).json({
+        message: 'FastAPI processing failed',
+        detail: ml.detail,
+      });
+      return;
+    }
+
+    res.status(504).json({ message: 'FastAPI processing timed out' });
   } catch (err) {
     next(err);
   }
