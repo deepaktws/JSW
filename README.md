@@ -6,7 +6,8 @@ Production-oriented layout with a **React 19 + Vite** client, **Express** API, *
 
 - `frontend/` — React 19, Vite, Redux Toolkit, RTK Query, React Router
 - `backend/` — Express, JWT auth, Prisma, bcrypt password hashing
-- `docker-compose.yml` — `client`, `server`, `postgres`
+- `excel-ml/` — FastAPI Excel processor (Python; own Dockerfile; not part of the Node backend tree)
+- `docker-compose.yml` — `client`, `server`, `postgres`, `excel-ml`
 
 ## Prerequisites
 
@@ -86,7 +87,8 @@ Then open:
 - **App:** http://localhost:5173  
 - **API:** http://localhost:5050  
 - **Swagger UI:** http://localhost:5050/docs (raw OpenAPI: `/docs/openapi.json`)  
-- **Postgres:** localhost:5432 (`app` / `app` / `appdb`)
+- **Postgres:** localhost:5432 (`app` / `app` / `appdb`)  
+- **Excel ML (FastAPI):** http://localhost:8000 (e.g. `/health`; used internally by `server` as `excel-ml:8000`)
 
 Optional env overrides (copy root `.env.example` → `.env`):
 
@@ -123,6 +125,7 @@ This uses the base Node.js Alpine image directly and:
 **What's mounted:**
 - `./backend` → `/app` (backend source + hot-reload with `node --watch`)
 - `./frontend` → `/app` (frontend source + Vite HMR)
+- `./excel-ml/app` → `/app/app` (Python API + uvicorn `--reload`)
 - `node_modules` are stored in named volumes (persist across restarts, not overwritten by host)
 
 **Workflow:**

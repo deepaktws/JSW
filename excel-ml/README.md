@@ -4,7 +4,7 @@ This service receives an Excel file, runs ML inference, saves a processed file i
 
 ## 1) Setup
 
-From `backend/model_scripts`:
+From `excel-ml` (repo root sibling of `backend/`):
 
 ```powershell
 python -m venv .venv
@@ -25,6 +25,13 @@ If your model has `feature_names_in_`, the API will enforce those columns from t
 ```powershell
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+### Docker (with full stack)
+
+From the repo root, `docker compose up` builds this image as service **`excel-ml`** (host port **8000**). The Node **`server`** service is configured with **`FASTAPI_URL=http://excel-ml:8000`**.
+
+- Copy a trained **`model.joblib`** into the container’s **`/app/models/`** (e.g. `docker cp path/to/model.joblib <excel-ml-container>:/app/models/model.joblib`) or bind-mount a host `models/` directory in compose if you prefer.
+- Named volumes keep **`models`** and **`output`** across restarts in production compose.
 
 ## 4) Environment variables (optional)
 
