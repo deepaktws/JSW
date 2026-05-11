@@ -501,7 +501,7 @@ export const openapiSpec: Record<string, unknown> = {
         tags: ['Files'],
         summary: 'Upload a file chunk (auto-finalizes when complete)',
         description:
-          'Upload file in chunks. Frontend generates file_id (UUID). Server auto-merges when all chunks received. Form field name must be `data`. Max chunk size 1MB.',
+          'Upload file in chunks. Frontend generates file_id (UUID). Server auto-merges when all chunks received. Form field name must be `data`. Max chunk size 1MB. When the **last** chunk completes: if `original_name` ends with `.xls` or `.xlsx`, the response is the **ML-processed workbook** (binary, 201) instead of JSON; otherwise 201 returns `{ completed, file }`. On ML failure after upload is saved, 502/504 JSON may include `file`.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -552,7 +552,8 @@ export const openapiSpec: Record<string, unknown> = {
         },
         responses: {
           201: {
-            description: 'Upload complete - all chunks received and merged',
+            description:
+              'Upload complete. Non-Excel: JSON with file metadata. Excel (.xls/.xlsx): processed spreadsheet binary (Content-Disposition attachment).',
             content: {
               'application/json': {
                 schema: {
@@ -562,6 +563,9 @@ export const openapiSpec: Record<string, unknown> = {
                     file: { $ref: '#/components/schemas/File' },
                   },
                 },
+              },
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+                schema: { type: 'string', format: 'binary' },
               },
             },
           },
@@ -588,6 +592,14 @@ export const openapiSpec: Record<string, unknown> = {
           },
           400: { description: 'Validation failed or invalid chunk' },
           401: { description: 'Unauthorized' },
+          502: {
+            description:
+              'Excel upload saved but FastAPI processing failed (JSON body may include `file`)',
+          },
+          504: {
+            description:
+              'Excel upload saved but FastAPI request timed out (JSON body may include `file`)',
+          },
         },
       },
     },

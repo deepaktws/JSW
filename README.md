@@ -164,6 +164,7 @@ Initial migration: `backend/prisma/migrations/`.
 | GET | `/users/:id` | Bearer JWT |
 | PATCH | `/users/me` | Bearer JWT (self only) |
 | DELETE | `/users/me` | Bearer JWT (soft-delete, self only) |
+| POST | `/files/upload` | Bearer JWT (chunked files; last chunk for `.xls`/`.xlsx` returns ML-processed spreadsheet, not JSON) |
 | POST | `/excel/upload` | Bearer JWT |
 
 ## Scripts

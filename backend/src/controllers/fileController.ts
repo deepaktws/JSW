@@ -1,5 +1,8 @@
+import { promises as fsPromises } from 'fs';
 import { validationResult } from 'express-validator';
 import type { Request, Response, NextFunction } from 'express';
+import { forwardExcelBufferToMl, isSpreadsheetOriginalName } from '../lib/excelMlForward.js';
+import { getFilePath } from '../lib/filePaths.js';
 import { paginatedHandler } from '../lib/pagination.js';
 import * as fileService from '../services/fileService.js';
 
@@ -40,6 +43,32 @@ export async function uploadChunk(req: Request, res: Response, next: NextFunctio
     });
 
     if (result.completed) {
+      if (isSpreadsheetOriginalName(result.file.originalName)) {
+        try {
+          const filePath = getFilePath(result.file);
+          const buffer = await fsPromises.readFile(filePath);
+          const ml = await forwardExcelBufferToMl(buffer, result.file.originalName);
+          if (ml.kind === 'success') {
+            res.setHeader('Content-Type', ml.contentType);
+            res.setHeader('Content-Disposition', `attachment; filename="${ml.attachmentFileName}"`);
+            res.status(201).send(ml.buffer);
+            return;
+          }
+          if (ml.kind === 'fastapi_error') {
+            res.status(502).json({
+              message: 'FastAPI processing failed',
+              detail: ml.detail,
+              file: result.file,
+            });
+            return;
+          }
+          res.status(504).json({ message: 'FastAPI processing timed out', file: result.file });
+          return;
+        } catch (err) {
+          next(err);
+          return;
+        }
+      }
       res.status(201).json({ completed: true, file: result.file });
       return;
     }
