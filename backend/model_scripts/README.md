@@ -4,7 +4,7 @@ This service receives an Excel file, runs ML inference, saves a processed file i
 
 ## 1) Setup
 
-From `backend/model Scripts`:
+From `backend/model_scripts`:
 
 ```powershell
 python -m venv .venv
