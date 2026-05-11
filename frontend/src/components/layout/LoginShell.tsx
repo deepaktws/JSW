@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Layout } from 'antd';
 import { AppNavbar } from './AppNavbar';
+import jswLogo from '../../../assets/jswLogo.png';
 
 const { Content } = Layout;
 
@@ -17,7 +18,7 @@ export function LoginShell({ children }: LoginShellProps) {
         <div className="pointer-events-none absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-primary/25 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 right-10 h-80 w-80 rounded-full bg-secondary/35 blur-3xl" />
         <img
-          src="/assets/jswLogo.png"
+          src={jswLogo}
           alt=""
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 m-auto w-[44rem] max-w-[92vw] object-contain opacity-20"

@@ -3,14 +3,19 @@ import { FileExcelOutlined, PlayCircleOutlined, UploadOutlined } from '@ant-desi
 import { Button, Card, Typography, Upload, message } from 'antd';
 import type { UploadProps } from 'antd';
 import { ExcelWorkbookView } from '../components/excel/ExcelWorkbookView';
-import { parseExcelWorkbook } from '../utils/parseExcelWorkbook';
+import { parseExcelWorkbook, type ParsedSheet } from '../utils/parseExcelWorkbook';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { uploadFileInChunks } from '../services/chunkUpload';
 const { Text, Title } = Typography;
 
 export function Home() {
   const [parsing, setParsing] = useState(false);
-  const [sheets, setSheets] = useState([]);
+  const [runningModel, setRunningModel] = useState(false);
+  const [sheets, setSheets] = useState<ParsedSheet[]>([]);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
   const navigate = useNavigate();
+  const { token } = useAuth();
   const hasExcel = sheets.length > 0;
   const totalRows = sheets.reduce((count, sheet) => count + sheet.rowCount, 0);
 
@@ -18,6 +23,7 @@ export function Home() {
     void (async () => {
       setParsing(true);
       try {
+        setExcelFile(file as File);
         const { sheets: nextSheets } = await parseExcelWorkbook(file as File);
         setSheets(nextSheets);
         const nextTotalRows = nextSheets.reduce((n, s) => n + s.rowCount, 0);
@@ -26,6 +32,7 @@ export function Home() {
         const msg = err instanceof Error ? err.message : 'Could not read that file';
         message.error(msg);
         setSheets([]);
+        setExcelFile(null);
       } finally {
         setParsing(false);
       }
@@ -48,8 +55,50 @@ export function Home() {
   );
 
   const handleSendToModel = () => {
-    if (!hasExcel) return;
-    navigate('/model');
+    if (!hasExcel || !excelFile) return;
+    if (!token) {
+      message.error('Please login to run the model.');
+      return;
+    }
+
+    (async () => {
+      setRunningModel(true);
+      const uploadToastKey = `upload-${crypto.randomUUID()}`;
+      message.open({ key: uploadToastKey, type: 'loading', content: 'Uploading file…', duration: 0 });
+      try {
+        const result = await uploadFileInChunks({
+          file: excelFile,
+          token,
+          chunkSizeBytes: 256 * 1024,
+          onProgress: ({ percentage }) => {
+            message.open({
+              key: uploadToastKey,
+              type: 'loading',
+              content: `Uploading file… ${percentage}%`,
+              duration: 0,
+            });
+          },
+        });
+
+        if (!result.completed) {
+          message.open({
+            key: uploadToastKey,
+            type: 'warning',
+            content: 'Upload did not complete. Please try again.',
+            duration: 2,
+          });
+          return;
+        }
+
+        message.open({ key: uploadToastKey, type: 'success', content: 'Upload complete.', duration: 1.5 });
+        navigate('/model', { state: { fileId: result.fileId } });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Upload failed';
+        message.open({ key: uploadToastKey, type: 'error', content: msg, duration: 3 });
+      } finally {
+        setRunningModel(false);
+      }
+    })();
   };
 
   return (
@@ -82,8 +131,9 @@ export function Home() {
             <Button
               type="default"
               icon={<PlayCircleOutlined />}
-              disabled={!hasExcel}
+              disabled={!hasExcel || !excelFile || runningModel}
               onClick={handleSendToModel}
+              loading={runningModel}
               className="!border-secondary-border !text-secondary disabled:!text-secondary/40"
             >
               Run Model

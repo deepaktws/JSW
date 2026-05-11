@@ -1,5 +1,6 @@
 import { Button } from 'antd';
 import { Link } from 'react-router-dom';
+import jswLogo from '../../../assets/jswLogo.png';
 
 type AppNavbarProps = {
   showLogout?: boolean;
@@ -11,7 +12,7 @@ export function AppNavbar({ showLogout = false, onLogout }: AppNavbarProps) {
     <header className="sticky top-0 z-20 border-b border-secondary-border/80 bg-secondary/95 backdrop-blur">
       <div className="relative mx-auto flex h-16 w-full items-center justify-between px-4">
         <Link to="/home">
-          <img src="/assets/jswLogo.png" alt="JSW logo" className="block h-8 w-32 object-contain" />
+          <img src={jswLogo} alt="JSW logo" className="block h-8 w-32 object-contain" />
         </Link>
 
         <div className="pointer-events-none absolute left-1/2 -translate-x-1/2">

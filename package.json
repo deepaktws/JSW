@@ -5,6 +5,21 @@
     "test": "npm --prefix backend test && npm --prefix frontend test",
     "test:backend": "npm --prefix backend test",
     "test:frontend": "npm --prefix frontend test",
-    "test:coverage": "npm --prefix backend test:coverage && npm --prefix frontend test:coverage"
+    "test:coverage": "npm --prefix backend test:coverage && npm --prefix frontend test:coverage",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build --pull",
+    "docker:build:clean": "docker compose build --no-cache --pull",
+    "docker:restart": "docker compose down && docker compose up -d --build",
+    "docker:ps": "docker compose ps",
+    "docker:logs": "docker compose logs -f --tail=200",
+    "docker:cache:clean": "docker builder prune -f",
+    "docker:cache:clean:all": "docker system prune -af --volumes",
+    "docker:client:build": "docker compose build client",
+    "docker:client:up": "docker compose up -d client",
+    "docker:server:build": "docker compose build server"
   }
 }
+ 
+
+

@@ -25,7 +25,7 @@ type UsersResponse = {
 /**
  * API base URL from Vite env (injected at build time). Falls back for local dev.
  */
-const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5050';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 
 /**
  * RTK Query API slice — JWT attached via Redux auth state for protected routes.
@@ -33,7 +33,7 @@ const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5050';
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
-    baseUrl,
+    baseUrl: API_BASE_URL,
     prepareHeaders: (headers, { getState }) => {
       const state = getState() as { auth?: { token?: string | null } } | undefined;
       const token = state?.auth?.token;

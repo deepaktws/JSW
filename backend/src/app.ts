@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import authRoutes from './routes/authRoutes.js';
 import excelRoutes from './routes/excelRoutes.js';
@@ -17,6 +18,9 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use(
+  morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'),
+);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
