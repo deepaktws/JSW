@@ -46,6 +46,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - '5050:5050'
+    volumes:
+      - ./backend/uploads:/app/uploads
     environment:
       DATABASE_URL: postgresql://app:app@postgres:5432/appdb?schema=public
       JWT_SECRET: ${JWT_SECRET:-change-me-use-strong-secret-in-production}
