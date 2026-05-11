@@ -501,7 +501,7 @@ export const openapiSpec: Record<string, unknown> = {
         tags: ['Files'],
         summary: 'Upload a file chunk (auto-finalizes when complete)',
         description:
-          'Upload file in chunks. Frontend generates file_id (UUID). Server auto-merges when all chunks received. Form field name must be `data`. Max chunk size 1MB. When the **last** chunk completes: if `original_name` ends with `.xls` or `.xlsx`, the response is the **ML-processed workbook** (binary, 201) instead of JSON; otherwise 201 returns `{ completed, file }`. On ML failure after upload is saved, 502/504 JSON may include `file`.',
+          'Upload file in chunks. Frontend generates file_id (UUID). Server auto-merges when all chunks received. Form field name must be `data`. Max chunk size 1MB. When the last chunk completes, response is always JSON `{ completed: true, file }`. Use `POST /files/{id}/send-to-model` to run ML on a stored spreadsheet.',
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -552,8 +552,7 @@ export const openapiSpec: Record<string, unknown> = {
         },
         responses: {
           201: {
-            description:
-              'Upload complete. Non-Excel: JSON with file metadata. Excel (.xls/.xlsx): processed spreadsheet binary (Content-Disposition attachment).',
+            description: 'Upload complete — all chunks merged; returns file metadata JSON.',
             content: {
               'application/json': {
                 schema: {
@@ -563,9 +562,6 @@ export const openapiSpec: Record<string, unknown> = {
                     file: { $ref: '#/components/schemas/File' },
                   },
                 },
-              },
-              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
-                schema: { type: 'string', format: 'binary' },
               },
             },
           },
@@ -592,14 +588,6 @@ export const openapiSpec: Record<string, unknown> = {
           },
           400: { description: 'Validation failed or invalid chunk' },
           401: { description: 'Unauthorized' },
-          502: {
-            description:
-              'Excel upload saved but FastAPI processing failed (JSON body may include `file`)',
-          },
-          504: {
-            description:
-              'Excel upload saved but FastAPI request timed out (JSON body may include `file`)',
-          },
         },
       },
     },
@@ -685,6 +673,39 @@ export const openapiSpec: Record<string, unknown> = {
           401: { description: 'Unauthorized' },
           403: { description: 'Access denied' },
           404: { description: 'File not found' },
+        },
+      },
+    },
+    '/files/{id}/send-to-model': {
+      parameters: [
+        {
+          name: 'id',
+          in: 'path',
+          required: true,
+          schema: { type: 'string', format: 'uuid' },
+        },
+      ],
+      post: {
+        tags: ['Files'],
+        summary: 'Send stored spreadsheet to ML',
+        description:
+          'Reads the uploaded file from disk (unchanged), forwards to FastAPI, returns processed workbook. Only `.xls` / `.xlsx` names allowed.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Processed spreadsheet (binary)',
+            content: {
+              'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+                schema: { type: 'string', format: 'binary' },
+              },
+            },
+          },
+          400: { description: 'Invalid id or not a spreadsheet file' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Access denied' },
+          404: { description: 'File not found on disk' },
+          502: { description: 'FastAPI processing failed (JSON body)' },
+          504: { description: 'FastAPI request timed out (JSON body)' },
         },
       },
     },
